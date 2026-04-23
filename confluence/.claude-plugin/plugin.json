@@ -1,0 +1,10 @@
+{
+  "name": "confluence",
+  "description": "Plugin Claude Code para integração com Atlassian Confluence — extração de documentação técnica TOTVS (MIT010/MIT072) e gerenciamento de páginas.",
+  "version": "1.0.0",
+  "author": {
+    "name": "TBC Serviços"
+  },
+  "homepage": "https://github.com/tbc-servicos/tbc_knowledge",
+  "repository": "https://github.com/tbc-servicos/tbc_knowledge"
+}

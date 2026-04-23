@@ -1,0 +1,13 @@
+{
+  "name": "tbc_knowledge",
+  "description": "TBC Knowledge — Skills TOTVS para desenvolvimento Fluig e Protheus",
+  "author": { "name": "TBC Serviços", "url": "https://www.totvstbc.com.br" },
+  "plugins": [
+    { "slug": "fluig", "path": "fluig" },
+    { "slug": "protheus", "path": "protheus" },
+    { "slug": "confluence", "path": "confluence" },
+    { "slug": "playwright", "path": "playwright" },
+    { "slug": "tae", "path": "tae" },
+    { "slug": "jira-api", "path": "jira-api" }
+  ]
+}
