@@ -69,23 +69,29 @@ Substitua `<EMAIL>` pelo email informado no Passo 2.
 
 ### Passo 4 — Verificar a conexão com o servidor
 
-Execute:
+Verifique se o servidor está acessível. Escolha o comando pelo OS detectado no Passo 3:
+
+**Linux / macOS:**
 ```bash
-curl -s -X POST https://mcp.totvstbc.com.br/auth \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"$TBC_USER_EMAIL\"}" 2>/dev/null
+curl -s -o /dev/null -w "%{http_code}" https://mcp.totvstbc.com.br/ 2>/dev/null
 ```
 
-Interprete a resposta:
+**Windows (PowerShell):**
+```powershell
+try { (Invoke-WebRequest -Uri "https://mcp.totvstbc.com.br/" -UseBasicParsing).StatusCode } catch { $_.Exception.Response.StatusCode.value__ }
+```
 
-| Resposta | O que dizer ao usuário |
-|----------|----------------------|
-| `"tier":"trial"` | "✓ Acesso ativado! Seu trial de 30 dias começou. Use `/protheus:specialist` para começar." |
-| `"tier":"internal"` | "✓ Acesso interno confirmado. Tudo pronto!" |
-| `"tier":"standard"` | "✓ Assinatura ativa. Tudo pronto!" |
-| HTTP 402 | "Seu trial expirou. Acesse https://mcp.totvstbc.com.br/payment para renovar." |
-| HTTP 403 | "Email não encontrado. Entre em contato com fabricadesoftwaretbc@totvs.com.br" |
-| Erro de conexão | "Não foi possível conectar ao servidor. Verifique sua internet e tente novamente." |
+**Windows (Git Bash / CMD com curl):**
+```bash
+curl -s -o /dev/null -w "%{http_code}" https://mcp.totvstbc.com.br/ 2>/dev/null
+```
+
+| Resultado | O que dizer |
+|-----------|-------------|
+| Qualquer código HTTP (200, 404, 502...) | "✓ Servidor acessível. Configuração concluída." |
+| Erro de rede / timeout | "Não foi possível conectar. Verifique sua internet." |
+
+> A autenticação acontece automaticamente na primeira skill usada. Se o email for novo, o trial de 30 dias é ativado nesse momento.
 
 ### Passo 5 — Finalizar
 
