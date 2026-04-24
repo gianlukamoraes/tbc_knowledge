@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // tbc-mcp-proxy v1.1.0 — bundle gerado automaticamente
-// NÃO EDITAR — edite mcp-proxy/connect-remote.js e rode npm run build
+// NÃO EDITAR — edite mcp-proxy/ e rode npm run build
 
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -17632,10 +17632,9 @@ var ProgressTokenSchema = union([string2(), number2().int()]);
 var CursorSchema = string2();
 var TaskCreationParamsSchema = looseObject({
   /**
-   * Time in milliseconds to keep task results available after completion.
-   * If null, the task has unlimited lifetime until manually cleaned up.
+   * Requested duration in milliseconds to retain task from creation.
    */
-  ttl: union([number2(), _null3()]).optional(),
+  ttl: number2().optional(),
   /**
    * Time in milliseconds to wait between task status requests.
    */
@@ -17935,7 +17934,11 @@ var ClientCapabilitiesSchema = object2({
   /**
    * Present if the client supports task creation.
    */
-  tasks: ClientTasksCapabilitySchema.optional()
+  tasks: ClientTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the client supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeRequestParamsSchema = BaseRequestParamsSchema.extend({
   /**
@@ -17996,7 +17999,11 @@ var ServerCapabilitiesSchema = object2({
   /**
    * Present if the server supports task creation.
    */
-  tasks: ServerTasksCapabilitySchema.optional()
+  tasks: ServerTasksCapabilitySchema.optional(),
+  /**
+   * Extensions that the server supports. Keys are extension identifiers (vendor-prefix/extension-name).
+   */
+  extensions: record(string2(), AssertObjectSchema).optional()
 });
 var InitializeResultSchema = ResultSchema.extend({
   /**
@@ -18189,6 +18196,12 @@ var ResourceSchema = object2({
    * The MIME type of this resource, if known.
    */
   mimeType: optional(string2()),
+  /**
+   * The size of the raw resource content, in bytes (i.e., before base64 encoding or any tokenization), if known.
+   *
+   * This can be used by Hosts to display file sizes and estimate context window usage.
+   */
+  size: optional(number2()),
   /**
    * Optional annotations for the client.
    */
@@ -21768,6 +21781,9 @@ var ParseError = class extends Error {
     super(message), this.name = "ParseError", this.type = options.type, this.field = options.field, this.value = options.value, this.line = options.line;
   }
 };
+var LF = 10;
+var CR = 13;
+var SPACE = 32;
 function noop(_arg) {
 }
 function createParser(callbacks) {
@@ -21775,39 +21791,109 @@ function createParser(callbacks) {
     throw new TypeError(
       "`callbacks` must be an object, got a function instead. Did you mean `{onEvent: fn}`?"
     );
-  const { onEvent = noop, onError = noop, onRetry = noop, onComment } = callbacks;
-  let incompleteLine = "", isFirstChunk = true, id, data = "", eventType = "";
-  function feed(newChunk) {
-    const chunk = isFirstChunk ? newChunk.replace(/^\xEF\xBB\xBF/, "") : newChunk, [complete, incomplete] = splitLines(`${incompleteLine}${chunk}`);
-    for (const line of complete)
-      parseLine(line);
-    incompleteLine = incomplete, isFirstChunk = false;
+  const { onEvent = noop, onError = noop, onRetry = noop, onComment } = callbacks, pendingFragments = [];
+  let isFirstChunk = true, id, data = "", dataLines = 0, eventType;
+  function feed(chunk) {
+    if (isFirstChunk && (isFirstChunk = false, chunk.charCodeAt(0) === 239 && chunk.charCodeAt(1) === 187 && chunk.charCodeAt(2) === 191 && (chunk = chunk.slice(3))), pendingFragments.length === 0) {
+      const trailing2 = processLines(chunk);
+      trailing2 !== "" && pendingFragments.push(trailing2);
+      return;
+    }
+    if (chunk.indexOf(`
+`) === -1 && chunk.indexOf("\r") === -1) {
+      pendingFragments.push(chunk);
+      return;
+    }
+    pendingFragments.push(chunk);
+    const input = pendingFragments.join("");
+    pendingFragments.length = 0;
+    const trailing = processLines(input);
+    trailing !== "" && pendingFragments.push(trailing);
   }
-  function parseLine(line) {
-    if (line === "") {
+  function processLines(chunk) {
+    let searchIndex = 0;
+    if (chunk.indexOf("\r") === -1) {
+      let lfIndex = chunk.indexOf(`
+`, searchIndex);
+      for (; lfIndex !== -1; ) {
+        if (searchIndex === lfIndex) {
+          dataLines > 0 && onEvent({ id, event: eventType, data }), id = void 0, data = "", dataLines = 0, eventType = void 0, searchIndex = lfIndex + 1, lfIndex = chunk.indexOf(`
+`, searchIndex);
+          continue;
+        }
+        const firstCharCode = chunk.charCodeAt(searchIndex);
+        if (isDataPrefix(chunk, searchIndex, firstCharCode)) {
+          const valueStart = chunk.charCodeAt(searchIndex + 5) === SPACE ? searchIndex + 6 : searchIndex + 5, value = chunk.slice(valueStart, lfIndex);
+          if (dataLines === 0 && chunk.charCodeAt(lfIndex + 1) === LF) {
+            onEvent({ id, event: eventType, data: value }), id = void 0, data = "", eventType = void 0, searchIndex = lfIndex + 2, lfIndex = chunk.indexOf(`
+`, searchIndex);
+            continue;
+          }
+          data = dataLines === 0 ? value : `${data}
+${value}`, dataLines++;
+        } else isEventPrefix(chunk, searchIndex, firstCharCode) ? eventType = chunk.slice(
+          chunk.charCodeAt(searchIndex + 6) === SPACE ? searchIndex + 7 : searchIndex + 6,
+          lfIndex
+        ) || void 0 : parseLine(chunk, searchIndex, lfIndex);
+        searchIndex = lfIndex + 1, lfIndex = chunk.indexOf(`
+`, searchIndex);
+      }
+      return chunk.slice(searchIndex);
+    }
+    for (; searchIndex < chunk.length; ) {
+      const crIndex = chunk.indexOf("\r", searchIndex), lfIndex = chunk.indexOf(`
+`, searchIndex);
+      let lineEnd = -1;
+      if (crIndex !== -1 && lfIndex !== -1 ? lineEnd = crIndex < lfIndex ? crIndex : lfIndex : crIndex !== -1 ? crIndex === chunk.length - 1 ? lineEnd = -1 : lineEnd = crIndex : lfIndex !== -1 && (lineEnd = lfIndex), lineEnd === -1)
+        break;
+      parseLine(chunk, searchIndex, lineEnd), searchIndex = lineEnd + 1, chunk.charCodeAt(searchIndex - 1) === CR && chunk.charCodeAt(searchIndex) === LF && searchIndex++;
+    }
+    return chunk.slice(searchIndex);
+  }
+  function parseLine(chunk, start, end) {
+    if (start === end) {
       dispatchEvent();
       return;
     }
-    if (line.startsWith(":")) {
-      onComment && onComment(line.slice(line.startsWith(": ") ? 2 : 1));
+    const firstCharCode = chunk.charCodeAt(start);
+    if (isDataPrefix(chunk, start, firstCharCode)) {
+      const valueStart = chunk.charCodeAt(start + 5) === SPACE ? start + 6 : start + 5, value2 = chunk.slice(valueStart, end);
+      data = dataLines === 0 ? value2 : `${data}
+${value2}`, dataLines++;
       return;
     }
-    const fieldSeparatorIndex = line.indexOf(":");
-    if (fieldSeparatorIndex !== -1) {
-      const field = line.slice(0, fieldSeparatorIndex), offset = line[fieldSeparatorIndex + 1] === " " ? 2 : 1, value = line.slice(fieldSeparatorIndex + offset);
-      processField(field, value, line);
+    if (isEventPrefix(chunk, start, firstCharCode)) {
+      eventType = chunk.slice(chunk.charCodeAt(start + 6) === SPACE ? start + 7 : start + 6, end) || void 0;
       return;
     }
-    processField(line, "", line);
+    if (firstCharCode === 105 && chunk.charCodeAt(start + 1) === 100 && chunk.charCodeAt(start + 2) === 58) {
+      const value2 = chunk.slice(chunk.charCodeAt(start + 3) === SPACE ? start + 4 : start + 3, end);
+      id = value2.includes("\0") ? void 0 : value2;
+      return;
+    }
+    if (firstCharCode === 58) {
+      if (onComment) {
+        const line2 = chunk.slice(start, end);
+        onComment(line2.slice(chunk.charCodeAt(start + 1) === SPACE ? 2 : 1));
+      }
+      return;
+    }
+    const line = chunk.slice(start, end), fieldSeparatorIndex = line.indexOf(":");
+    if (fieldSeparatorIndex === -1) {
+      processField(line, "", line);
+      return;
+    }
+    const field = line.slice(0, fieldSeparatorIndex), offset = line.charCodeAt(fieldSeparatorIndex + 1) === SPACE ? 2 : 1, value = line.slice(fieldSeparatorIndex + offset);
+    processField(field, value, line);
   }
   function processField(field, value, line) {
     switch (field) {
       case "event":
-        eventType = value;
+        eventType = value || void 0;
         break;
       case "data":
-        data = `${data}${value}
-`;
+        data = dataLines === 0 ? value : `${data}
+${value}`, dataLines++;
         break;
       case "id":
         id = value.includes("\0") ? void 0 : value;
@@ -21832,37 +21918,26 @@ function createParser(callbacks) {
     }
   }
   function dispatchEvent() {
-    data.length > 0 && onEvent({
+    dataLines > 0 && onEvent({
       id,
-      event: eventType || void 0,
-      // If the data buffer's last character is a U+000A LINE FEED (LF) character,
-      // then remove the last character from the data buffer.
-      data: data.endsWith(`
-`) ? data.slice(0, -1) : data
-    }), id = void 0, data = "", eventType = "";
+      event: eventType,
+      data
+    }), id = void 0, data = "", dataLines = 0, eventType = void 0;
   }
   function reset(options = {}) {
-    incompleteLine && options.consume && parseLine(incompleteLine), isFirstChunk = true, id = void 0, data = "", eventType = "", incompleteLine = "";
+    if (options.consume && pendingFragments.length > 0) {
+      const incompleteLine = pendingFragments.join("");
+      parseLine(incompleteLine, 0, incompleteLine.length);
+    }
+    isFirstChunk = true, id = void 0, data = "", dataLines = 0, eventType = void 0, pendingFragments.length = 0;
   }
   return { feed, reset };
 }
-function splitLines(chunk) {
-  const lines = [];
-  let incompleteLine = "", searchIndex = 0;
-  for (; searchIndex < chunk.length; ) {
-    const crIndex = chunk.indexOf("\r", searchIndex), lfIndex = chunk.indexOf(`
-`, searchIndex);
-    let lineEnd = -1;
-    if (crIndex !== -1 && lfIndex !== -1 ? lineEnd = Math.min(crIndex, lfIndex) : crIndex !== -1 ? crIndex === chunk.length - 1 ? lineEnd = -1 : lineEnd = crIndex : lfIndex !== -1 && (lineEnd = lfIndex), lineEnd === -1) {
-      incompleteLine = chunk.slice(searchIndex);
-      break;
-    } else {
-      const line = chunk.slice(searchIndex, lineEnd);
-      lines.push(line), searchIndex = lineEnd + 1, chunk[searchIndex - 1] === "\r" && chunk[searchIndex] === `
-` && searchIndex++;
-    }
-  }
-  return [lines, incompleteLine];
+function isDataPrefix(chunk, i, firstCharCode) {
+  return firstCharCode === 100 && chunk.charCodeAt(i + 1) === 97 && chunk.charCodeAt(i + 2) === 116 && chunk.charCodeAt(i + 3) === 97 && chunk.charCodeAt(i + 4) === 58;
+}
+function isEventPrefix(chunk, i, firstCharCode) {
+  return firstCharCode === 101 && chunk.charCodeAt(i + 1) === 118 && chunk.charCodeAt(i + 2) === 101 && chunk.charCodeAt(i + 3) === 110 && chunk.charCodeAt(i + 4) === 116 && chunk.charCodeAt(i + 5) === 58;
 }
 
 // node_modules/eventsource-parser/dist/stream.js
@@ -23010,7 +23085,7 @@ async function startDiagnosticServer(errorMessage, emailUsed) {
     hostname: hostname3(),
     server: REMOTE_URL,
     version: VERSION,
-    fix: !emailUsed ? 'Configure o email: export TBC_USER_EMAIL=seu@email.com.br OU crie ~/.config/tbc/dev-config.json com {"email":"seu@email.com.br"}' : errorMessage.includes("denied") ? `Email "${emailUsed}" nao autorizado. Entre em contato com o suporte TBC para provisionar acesso.` : "Verifique sua conexao com a internet e tente novamente"
+    fix: !emailUsed ? 'Configure o email: export TBC_USER_EMAIL=seu@email.com.br OU crie ~/.config/tbc/dev-config.json com {"email":"seu@email.com.br"}' : errorMessage.includes("denied") ? `Email "${emailUsed}" nao cadastrado. Solicite ao administrador em https://mcp.totvstbc.com.br/admin` : "Verifique sua conexao com a internet e tente novamente"
   };
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [{
@@ -23037,7 +23112,35 @@ if (!email3) {
     await startDiagnosticServer(err.message, email3).catch(() => process.exit(1));
   });
 }
+async function checkSubscription() {
+  const res = await fetch(REMOTE_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-user-email": email3,
+      "x-hostname": hostname3(),
+      "x-os-user": userInfo().username,
+      "x-proxy-version": VERSION
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", id: 0, params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "tbc-mcp-proxy", version: VERSION } } })
+  });
+  if (res.status === 402) {
+    const body = await res.json().catch(() => ({}));
+    const url2 = body.checkout_url || "https://mcp.totvstbc.com.br/payment";
+    console.error("\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557");
+    console.error("\u2551   TBC Knowledge \u2014 Assinatura Expirada  \u2551");
+    console.error("\u255A\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255D");
+    console.error(`
+  Seu per\xEDodo de trial expirou.`);
+    console.error(`  Para continuar usando, acesse:
+`);
+    console.error(`  ${url2}
+`);
+    process.exit(1);
+  }
+}
 async function main() {
+  await checkSubscription();
   const transport = new StreamableHTTPClientTransport(
     new URL(REMOTE_URL),
     {
