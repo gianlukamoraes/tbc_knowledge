@@ -1,27 +1,52 @@
-# TBC Knowledge — Plugin Claude Code
+# TBC Knowledge
 
 Skills TOTVS para desenvolvimento Fluig e Protheus, com acesso ao knowledge base TBC via MCP.
 
+---
+
 ## Instalação
 
+Cole no seu terminal e pressione Enter:
+
+**Linux / macOS**
 ```bash
-claude plugin marketplace add https://github.com/tbc-servicos/tbc_knowledge.git
-claude plugin install fluig@tbc_knowledge
-claude plugin install protheus@tbc_knowledge
+curl -fsSL https://raw.githubusercontent.com/tbc-servicos/tbc_knowledge/main/install.sh | sh
 ```
+
+**Windows (PowerShell)**
+```powershell
+irm https://raw.githubusercontent.com/tbc-servicos/tbc_knowledge/main/install.ps1 | iex
+```
+
+> Requer [Claude Code](https://claude.ai/download) instalado.
+
+---
 
 ## Configuração
 
-Defina seu email de acesso como variável de ambiente:
+Após instalar, abra o Claude Code e execute:
 
-```bash
-# Linux/macOS
-export TBC_USER_EMAIL=seu-email@suaempresa.com
-
-# Windows
-set TBC_USER_EMAIL=seu-email@suaempresa.com
 ```
+/protheus:setup
+```
+
+O assistente detecta seu sistema operacional e configura tudo automaticamente.
+
+---
+
+## Plugins incluídos
+
+| Plugin | O que faz |
+|--------|-----------|
+| `protheus` | Skills ADVPL/TLPP — padrões, geração de código, diagnóstico |
+| `fluig` | Skills Fluig — widgets Angular, datasets, workflows BPM |
+| `confluence` | Integração com Confluence |
+| `playwright` | Testes E2E para Protheus |
+| `tae` | TOTVS Assinatura Eletrônica |
+| `jira-api` | Integração com Jira |
+
+---
 
 ## Suporte
 
-Entre em contato: comercial@tbc.com.br
+fabricadesoftwaretbc@totvs.com.br

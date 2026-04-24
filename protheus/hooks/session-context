@@ -31,7 +31,8 @@ context="Plugins TBC instalados:\n${versions}\nSkills Protheus disponiveis (use 
   - /protheus:migrate — Migra ADVPL procedural para TLPP orientado a objetos\n\
   - /protheus:test-web — Testes E2E Protheus via Playwright\n\
   - /protheus:feedback — Registra correcao na base de conhecimento\n\
-  - /protheus:importar-gerenciador-projeto — Monta JSON para importacao de projetos no Gerenciador de Projetos (UTBCA012)\n\n\
+  - /protheus:importar-gerenciador-projeto — Monta JSON para importacao de projetos no Gerenciador de Projetos (UTBCA012)\n\
+  - /protheus:setup — Configuracao guiada do TBC Knowledge (email de acesso, deteccao de OS)\n\n\
 MCP tools disponiveis: searchKnowledge, searchFunction, findExecAuto, findMvcPattern, searchByTable (plugin protheus tbc-knowledge)\n\n\
 Regra de modelos TBC: haiku para implementacao, sonnet para review/QA, opus somente se o dev pedir."
 
