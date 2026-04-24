@@ -1,6 +1,6 @@
 # TBC Knowledge — Instalador para Windows (PowerShell)
 
-$MarketplaceUrl = "https://github.com/tbc-servicos/tbc_knowledge.git"
+$MarketplaceUrl = "https://github.com/gianlukamoraes/tbc_knowledge.git"
 $Plugins = @("protheus", "fluig", "confluence", "playwright", "tae", "jira-api")
 
 Write-Host ""

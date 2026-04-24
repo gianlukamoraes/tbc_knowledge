@@ -10,12 +10,12 @@ Cole no seu terminal e pressione Enter:
 
 **Linux / macOS**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/tbc-servicos/tbc_knowledge/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/gianlukamoraes/tbc_knowledge/main/install.sh | sh
 ```
 
 **Windows (PowerShell)**
 ```powershell
-irm https://raw.githubusercontent.com/tbc-servicos/tbc_knowledge/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/gianlukamoraes/tbc_knowledge/main/install.ps1 | iex
 ```
 
 > Requer [Claude Code](https://claude.ai/download) instalado.

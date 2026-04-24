@@ -4,7 +4,7 @@
 
 set -e
 
-MARKETPLACE_URL="https://github.com/tbc-servicos/tbc_knowledge.git"
+MARKETPLACE_URL="https://github.com/gianlukamoraes/tbc_knowledge.git"
 PLUGINS="protheus fluig confluence playwright tae jira-api"
 
 echo ""
