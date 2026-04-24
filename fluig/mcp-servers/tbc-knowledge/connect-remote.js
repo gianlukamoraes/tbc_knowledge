@@ -46,23 +46,43 @@ async function startDiagnosticServer(errorMessage, emailUsed) {
     { capabilities: { tools: {} } }
   );
 
+  const isExpired = errorMessage.includes('subscription_required');
+  const PAYMENT_URL = 'https://mcp.totvstbc.com.br/payment?expired=1';
+
   const diagnosticInfo = {
-    status: 'error',
-    message: errorMessage,
+    status: isExpired ? 'expired' : 'error',
+    message: isExpired
+      ? `Seu trial TBC DevAI expirou. Acesse ${PAYMENT_URL} para continuar.`
+      : errorMessage,
     email: emailUsed || '(não configurado)',
     hostname: hostname(),
     server: REMOTE_URL,
     fix: !emailUsed
       ? 'Configure o email: export TBC_USER_EMAIL=seu@email.com.br'
-      : errorMessage.includes('denied')
-        ? `Email "${emailUsed}" não autorizado. Entre em contato com o suporte TBC para provisionar acesso.`
-        : 'Verifique sua conexão com a internet e tente novamente',
+      : isExpired
+        ? `Seu trial expirou. Para continuar: ${PAYMENT_URL}`
+        : errorMessage.includes('denied')
+          ? `Email "${emailUsed}" não autorizado. Acesse ${PAYMENT_URL} para ativar um plano.`
+          : 'Verifique sua conexão com a internet e tente novamente',
+    checkout_url: isExpired ? PAYMENT_URL : undefined,
   };
+
+  if (isExpired) {
+    process.stderr.write('\n');
+    process.stderr.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    process.stderr.write(' TBC DevAI — Trial expirado\n');
+    process.stderr.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    process.stderr.write(` Email: ${emailUsed}\n`);
+    process.stderr.write(` Para continuar: ${PAYMENT_URL}\n`);
+    process.stderr.write('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+  }
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [{
       name: 'getConnectionStatus',
-      description: `[ERRO] MCP não conectado: ${errorMessage}. Use esta tool para ver detalhes.`,
+      description: isExpired
+        ? `[TRIAL EXPIRADO] Acesse ${PAYMENT_URL} para ativar um plano.`
+        : `[ERRO] MCP não conectado: ${errorMessage}. Use esta tool para ver detalhes.`,
       inputSchema: { type: 'object', properties: {} },
     }],
   }));
