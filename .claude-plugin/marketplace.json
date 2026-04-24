@@ -1,13 +1,67 @@
 {
   "name": "tbc_knowledge",
-  "description": "TBC Knowledge — Skills TOTVS para desenvolvimento Fluig e Protheus",
-  "author": { "name": "TBC Serviços", "url": "https://www.totvstbc.com.br" },
+  "owner": {
+    "name": "TBC Serviços",
+    "email": "fabricadesoftwaretbc@totvs.com.br"
+  },
+  "metadata": {
+    "description": "Skills TOTVS para desenvolvimento Fluig e Protheus com knowledge base TBC via MCP.",
+    "pluginRoot": "."
+  },
   "plugins": [
-    { "slug": "fluig", "path": "fluig" },
-    { "slug": "protheus", "path": "protheus" },
-    { "slug": "confluence", "path": "confluence" },
-    { "slug": "playwright", "path": "playwright" },
-    { "slug": "tae", "path": "tae" },
-    { "slug": "jira-api", "path": "jira-api" }
+    {
+      "name": "protheus",
+      "source": "./protheus",
+      "description": "Skills ADVPL/TLPP — padrões, geração de código, diagnóstico e knowledge base Protheus.",
+      "version": "2.0.7",
+      "author": { "name": "TBC Serviços" },
+      "category": "development",
+      "tags": ["protheus", "totvs", "advpl", "tlpp"]
+    },
+    {
+      "name": "fluig",
+      "source": "./fluig",
+      "description": "Skills Fluig — widgets Angular, datasets, formulários e workflows BPM.",
+      "version": "2.0.5",
+      "author": { "name": "TBC Serviços" },
+      "category": "development",
+      "tags": ["fluig", "totvs", "bpm", "angular", "po-ui"]
+    },
+    {
+      "name": "confluence",
+      "source": "./confluence",
+      "description": "Integração com Atlassian Confluence Cloud e extração de documentação técnica TOTVS.",
+      "version": "1.0.0",
+      "author": { "name": "TBC Serviços" },
+      "category": "documentation",
+      "tags": ["confluence", "atlassian", "totvs", "documentation"]
+    },
+    {
+      "name": "playwright",
+      "source": "./playwright",
+      "description": "Testes E2E com Playwright — setup, execução e test-agents para Protheus.",
+      "version": "1.0.0",
+      "author": { "name": "TBC Serviços" },
+      "category": "testing",
+      "tags": ["playwright", "e2e", "testing", "automation"]
+    },
+    {
+      "name": "tae",
+      "source": "./tae",
+      "description": "TOTVS Assinatura Eletrônica — gerenciamento de publicações e assinaturas digitais.",
+      "version": "1.0.1",
+      "author": { "name": "TBC Serviços" },
+      "category": "integration",
+      "tags": ["tae", "totvs", "assinatura-eletronica"]
+    },
+    {
+      "name": "jira-api",
+      "source": "./jira-api",
+      "description": "Jira Cloud via REST API v3 — issues, attachments, search JQL avançado.",
+      "version": "1.0.1",
+      "author": { "name": "TBC Serviços" },
+      "category": "integration",
+      "tags": ["jira", "atlassian", "api"]
+    }
   ]
 }
